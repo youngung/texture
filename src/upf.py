@@ -1140,7 +1140,15 @@ class polefigure:
         if type(grains)!=type(None):
             self.gr = np.array(grains)
         elif type(filename)!=type(None):
-            self.gr = np.loadtxt(fname=filename,skiprows=4)
+            try:
+                self.gr = np.loadtxt(fname=filename,skiprows=4)
+            except:
+                import read_tex
+                blocks=read_tex.read(filename)
+                if len(blocks)>1:
+                    print '*** <%s> include %i number of snapshots'%(filename,len(blocks))
+                    print '*** The last snapshot of crystallographic texture is used'
+                    self.gr=read_tex.block2gr(blocks[-1])
         elif type(epf)!=type(None): # None is the default for epf
             """
             experimental pole figures..
