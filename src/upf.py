@@ -96,8 +96,8 @@ Updates
 #----------------------------------------------------------------------c
 ## import library blocks
 import warnings
-#warnings.filterwarnings("ignore")
-warnings.filterwarnings("error")
+# warnings.filterwarnings("ignore")
+# warnings.filterwarnings("error")
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -1329,6 +1329,8 @@ class polefigure:
 
             print 'levels in epfplot:'
             print levels
+
+            pf[pf[::]<=0]=1e-9
 
             #cnt=ax.contour(
             cnt=ax.contourf(
