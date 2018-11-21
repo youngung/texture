@@ -4,9 +4,7 @@ developed on (2010-Dec-29)
 
 YOUNGUNG JEONG
    Materials Mechanics Laboratory,
-   GIFT, POSTECH
-
-Editor used : GNU Emacs
+   Changwon National University
 
 planned feature
  1. Background subtraction
@@ -15,7 +13,6 @@ planned feature
  4. Make and save defocuse data
  5. All features need be interactive for later modifications
  6. pole figure monitoring with respect to corrections (bg, dfc)
-
 
 
 UXD 2THETA - INTENSITY PROFILE plotting software
@@ -442,21 +439,12 @@ class pf:
                      elif mode =='df': defocusing correction
                       -> defocusing data is written down to a files
 
-    note :
-       Due to use of 'set' type variable,
-       the order of blocks are messed up.
-       I've tried to bypass this but failed.
-
-       Since non-ordered case is more general,
-       in applicability-wise, it is good.
-       While, it is bad in coding-wise.
-
     Reference:
        TEXTURE AND ANISOTROPY, Cambridge University press
         - U.F. KOCKS, C. N. TOME AND H.R. WENK
           ** Chapter 4. Pole Figure Measurements with Diffraction Techniques (Wenk)
 
-    Standard procedure:
+    Procedure using manual-input:
        >>> import uxd
        >>> myclass=uxd.pf(filename= 'as_R.uxd', mode='pf')
 
@@ -474,6 +462,10 @@ class pf:
              sep is a separator in between data blocks.
              This can be different even between uxd files.
              Care must be taken for this.
+
+    Procedure using text-file input
+       >>> import uxd
+       >>> myclass=uxd.pf(inputfile='...')
 
 
      *** pole figure projections ***
@@ -809,8 +801,9 @@ class pf:
             #--------------------------------------
             # WRITING ACTIVITY TO POLE FIGURE FILE
             #--------------------------------------
-            if os.name=='nt': os.system('cls')
-            elif os.name=='posix': os.system('clear')
+            # if os.name=='nt': os.system('cls')
+            # elif os.name=='posix': os.system('clear')
+
             print "############################"
             print "      WRITING ACTIVITY     "
             print "############################\n"
@@ -1121,7 +1114,7 @@ class pf:
                 # Even bgmode is give as None behaves as if it were 'auto'
                 # Background will not be subtracted in the end, however.
                 for i in range(len(self.polefigures)):
-                    crr_2theta = self.pf_info(self.polefigures[i])[0]
+                    crr_2theta = self.pf_info(self.polefigures[i])[0] # _2th_
                     #This is for checking
                     """
                     temp = __near__(a=crr_2theta, b=bg2ths)
@@ -1297,3 +1290,27 @@ class pf:
 
         return _2theta, _khi, _steptime, _stepsize, str(delta_alpha)
     pass # end of class pf
+
+
+
+if __name__=='__main__':
+    """
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--filename', type=str, help='UXD file name',default='as_R.UXD')
+    parser.add_argument(
+        '--imode', type=int, help='Mode (0: defocus data aqusition; 1: pole figure)',default=1)
+    parser.add_argument(
+        '--bgmode', type=str, help='Background option; None for no-background treatment; manual; auto',
+        default='as_R.UXD')
+
+    args      = parser.parse_args()
+
+    if args.imode==0:mode='df'
+    if args.imode==1:mode='pf'
+    if args.bgmode in ['None', 'none']: args.bgmode=None
+
+    pf(filename=args.filename,mode=mode,bgmode=args.bgmode)
