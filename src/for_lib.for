@@ -114,16 +114,17 @@ c *****************************************************************************
       real*8 phi1,phi,phi2,ag(3,3),aux3(3),agt(3,3)
 cf2py intent(in) ngr, grains, npol, poles_ca
 cf2py intent(out) poles_sa,poles_wgt
-      do 10 igr=1,ngr
+      do 30 igr=1,ngr
          phi1 = grains(igr,1)
          phi  = grains(igr,2)
          phi2 = grains(igr,3)
          call euler(2,phi1,phi,phi2,ag) ! ca<-sa R_ij p_i
          do 5 i=1,3
          do 5 j=1,3
-            agt(i,j) = ag(j,i)
+            agt(i,j) = ag(j,i) ! sa<-ca
  5       continue
-      do 10 n=1,npol
+      do 30 n=1,npol
+         ! pole_sa<-pole_ca
          do 20 i=1,3
             aux3(i) = 0.d0
          do 20 j=1,3
@@ -132,6 +133,49 @@ cf2py intent(out) poles_sa,poles_wgt
  20      continue
          poles_sa(igr,n,:) = aux3(:)
          poles_wgt(igr,n)  = grains(igr,4)
- 10   continue
+ 30   continue
+      return
+      end subroutine
+
+
+c *****************************************************************************
+      subroutine grain2pole_sa_transf(
+     $     ngr,grains,npol,poles_ca,
+     $     poles_sa,poles_wgt,transform)
+      integer ngr,npol,i,j,igr,n
+      real*8 grains(ngr,4),poles_ca(npol,3),transform(3,3),
+     $     poles_sa(ngr,npol,3),poles_wgt(ngr,npol)
+      real*8 phi1,phi,phi2,ag(3,3),aux3(3),agt(3,3),aux33(3,3)
+cf2py intent(in) ngr, grains, npol, poles_ca, transform
+cf2py intent(out) poles_sa,poles_wgt
+      do 30 igr=1,ngr
+         phi1 = grains(igr,1)
+         phi  = grains(igr,2)
+         phi2 = grains(igr,3)
+         call euler(2,phi1,phi,phi2,ag) ! ca<-sa R_ij p_i
+         do 5 i=1,3
+         do 5 j=1,3
+            aux33(i,j) = ag(j,i)  ! sa<-ca
+ 5       continue
+
+c     transform sa`<-sa<-ca
+         agt(:,:)=0d0
+         do 6 i=1,3
+         do 6 j=1,3
+         do 6 k=1,3
+            agt(i,j)=agt(i,j)+transform(i,k)*aux33(k,j)
+ 6       continue
+
+      do 30 n=1,npol
+         ! pole_sa<-pole_ca
+         do 20 i=1,3
+            aux3(i) = 0.d0
+         do 20 j=1,3
+            aux3(i) = aux3(i) + agt(i,j) *
+     $           poles_ca(n,j)
+ 20      continue
+         poles_sa(igr,n,:) = aux3(:)
+         poles_wgt(igr,n)  = grains(igr,4)
+ 30   continue
       return
       end subroutine

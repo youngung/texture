@@ -134,6 +134,7 @@ try:
     proj_f    = pf_for_lib.projection
     euler_f   = pf_for_lib.euler
     gr2psa    = pf_for_lib.grain2pole_sa
+    gr2psa_transform    = pf_for_lib.grain2pole_sa_transf
     i_for=True
 except:
     i_for=False
@@ -2301,7 +2302,7 @@ class polefigure:
             mode='line',
             dth=10,dph=10,n_rim=2,cdim=None,ires=True,mn=None,mx=None,
             lev_norm_log=True,nlev=7,ilev=1,cmap='magma',
-            rot=0.,iline_khi80=False):
+            rot=0.,iline_khi80=False,transform=np.identity(3)):
         """
         New version of pf that will succeed upf.polefigure.pf
         Note that upf.polefigure.pf is deprecated and will be deleted soon.
@@ -2366,6 +2367,8 @@ class polefigure:
         <ilev>
            level option: 0 commonly contour levels for all poles generated
                          1 individual levels applied for individual poles
+        <transform>
+           transformation matrix applied to the entire polycrystal aggregate.
 
         Returns
         -------
@@ -2381,7 +2384,11 @@ class polefigure:
         ## PF plots for experimental pole figure is
         ## separately conducted by epfplot function
         if type(self.epf).__name__!='NoneType':
-            print 'Writing Experimental pole figures'
+            print '** Writing Experimental pole figures'
+            if transform==np.identity(3).all():
+                pass
+            else:
+                print '<transform> is ignored when plotting EPF'
             return self.epfplot(
                 ifig=ifig,cmap=cmap,nlev=nlev, mn=mn, mx=mx,
                 ix=ix,iy=iy,rot=rot,iline_khi80=iline_khi80)
@@ -2415,7 +2422,7 @@ class polefigure:
                 delayed(cells_pf)(
                     pole_ca=poles[i],dth=dth,dph=dph,
                     csym=self.csym,cang=self.cang,cdim=self.cdim,
-                    grains=self.gr,n_rim = n_rim) \
+                    grains=self.gr,n_rim = n_rim,transform=transform) \
                 for i in xrange(len(poles)))
             for i in xrange(len(rst)):
                 N.append(rst[i])
@@ -2425,7 +2432,7 @@ class polefigure:
                     pole_ca=poles[i],dth=dth,dph=dph,
                     csym=self.csym,cang=self.cang,
                     cdim=self.cdim,grains=self.gr,
-                    n_rim = n_rim))
+                    n_rim = n_rim,transform=transform))
 
         et = time.time()-t0
         uet(et,head='Elapsed time for calling cells_pf')
@@ -2742,11 +2749,11 @@ class polefigure:
 def cells_pf(
         pole_ca=[1,0,0],dph=7.5,
         dth =7.5,csym=None,cang=[90.,90.,90.],
-        cdim=[1.,1.,1.],grains=None,n_rim=2):
+        cdim=[1.,1.,1.],grains=None,n_rim=2,transform=np.identity(3)):
     """
-    Creates cells whose resolutioin is nphi, ntheta
+    Creates cells gridded in the dimension of (nphi, ntheta)
     Given the delta x and delt y (dm, dn), each pole's
-    weight is assigned to a cell which braces it.
+    weight is assigned to the cell to which it belongs.
     Plots the cell's weight and returns the cell in array.
 
     ---------
@@ -2759,6 +2766,7 @@ def cells_pf(
     cang = [90.,90.,90.]
     grains = None, [] array shape: (ngr, 3)
     n_rim=2
+    transform
     """
     tiny = 1e-9
     ## Find poles in sa [pole_sa]
@@ -2779,17 +2787,28 @@ def cells_pf(
 
     #i_for=False # debug
     if i_for:
-        poles_sa, poles_wgt = gr2psa(
-            ngr= len(grains),grains=grains,
-            npol=len(poles_ca),poles_ca=poles_ca) #np.array(poles_ca))
+        if (transform==np.identity).all():
+            poles_sa, poles_wgt = gr2psa(
+                ngr=len(grains),grains=grains,
+                npol=len(poles_ca),poles_ca=poles_ca) #np.array(poles_ca))
+        else: ## in case transformation matrix is not identity matrix.
+            poles_sa, poles_wgt = gr2psa_transform(
+                ngr=len(grains),grains=grains,
+                npol=len(poles_ca),poles_ca=poles_ca,transform=transform)
     else:
         for i in xrange(len(grains)):
             phi1,phi,phi2,wgt = grains[i]
             ## arg = euler_f(2,phi1,phi,phi2,np.zeros((3,3))) ## ca<-sa
             ## amat = arg[-1]
-            amat = euler(phi1,phi,phi2,a=None,echo=False)
+            amat=euler(phi1,phi,phi2,a=None,echo=False) ## ca<-sa
+            amat=amat.T ## sa<-ca
+            if (transform==np.identity).all():
+                pass
+            else:
+                amat=np.dot(transform,amat)
+
             for j in xrange(len(poles_ca)):
-                poles_sa[i,j,:] = np.dot(amat.T,poles_ca[j])
+                poles_sa[i,j,:] = np.dot(amat,poles_ca[j])
                 poles_wgt[i,j]  = wgt
 
     poles_sa  = poles_sa.reshape( (len(grains)*len(poles_ca),3))
