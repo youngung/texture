@@ -1368,6 +1368,29 @@ class polefigure:
 
         return fig
 
+    def transformation(self,transf):
+        """
+        Apply transf to <self.gr>.
+
+        Arguments
+        ---------
+        <transform>
+           transformation matrix applied to the entire polycrystal aggregate.
+        """
+        for i in xrange(len(self.gr)):
+            phi1,phi,phi2,wgt = self.gr[i]
+            ## arg = euler_f(2,phi1,phi,phi2,np.zeros((3,3))) ## ca<-sa
+            ## amat = arg[-1]
+            amat=euler(phi1,phi,phi2,a=None,echo=False) ## ca<-sa
+            amat=amat.T ## sa<-ca
+            if (transf==np.identity).all():
+                pass
+            else:
+                amat=np.dot(transf,amat)
+
+            phi1,phi2,phi3 = euler(a=amat.T)
+            self.gr[i][:3]=phi1,phi2,phi3
+
     def pf_axis(self, pole=[[1,0,0]], ifig=1):
         """
         Plot each pole without crystal symmetry
@@ -3022,3 +3045,58 @@ def parse_epf(fn,n_unit=79):
         blocks.append(b)
 
     return blocks
+
+def axis2vect(i):
+    """
+    Argument
+    -------
+    <axis label> (1, 2, or 3; for the opposite directions use, -1, -2, or -3)
+
+    Returns
+    -------
+    <Unit vector in the form of list array>
+    """
+    if i==1:
+        return [1,0,0]
+    if i==2:
+        return [0,1,0]
+    if i==3:
+        return [0,0,1]
+    if i==-1:
+        return [-1,0,0]
+    if i==-2:
+        return [0,-1,0]
+    if i==-3:
+        return [0,0,-1]
+
+def axes2transf(x,y):
+    """
+    Arguments
+    ---------
+    <x>:  (label of horizontal axis (right))
+    <y>:  (label of vertical axis (top))
+
+    ** note that, z (the direction made by x cross y) is naturally determined.
+
+    Returns
+    -------
+    <mat> : transformation matrix that rotates given lab axes to
+             the given (x, y, z)
+
+          ** Use this transformation matrix to rotate the VPSC's discrete orientations (in Bunge)
+
+
+    ## Example
+    Refer to <8378_pf.ipynb> located under <matData/vpscData/AZ31_Wang_8378> of VPSCX repository.
+    """
+    xv=axis2vect(x)
+    yv=axis2vect(y)
+    zv=np.cross(xv,yv)
+    mat=np.zeros((3,3)) ## xv<- e1, yv<- e2, zv<- e3
+    mat[:,0]=xv[:]
+    mat[:,1]=yv[:]
+    mat[:,2]=zv[:]
+    print 'xv:',xv
+    print 'yv:',yv
+    print 'zv:',zv
+    return mat
